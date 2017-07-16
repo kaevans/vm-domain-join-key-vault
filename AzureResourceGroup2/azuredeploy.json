@@ -1,0 +1,208 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters":
+  {
+    "region":
+    {
+      "type": "string",
+      "minLength": 1
+    },
+    "vmName":
+    {
+      "type": "string",
+      "minLength": 1
+    },
+    "domainToJoin":
+    {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "blueskyabove.local",
+      "metadata":
+      {
+        "description": "The domain user alias to use when joining the machine to the specified domain"
+      }
+    },
+    "domainUsername":
+    {
+      "type": "string",      
+      "minLength": 1,
+      "metadata":
+      {
+        "description": "The domain user alias to use when joining the machine to the specified domain"
+      }
+    },
+    "domainPassword":
+    {
+      "type": "string",
+      "minLength": 1,
+      "metadata":
+      {
+        "description": "The password of the domain user to use when joining the machine to the specified domain"
+      }
+    }
+  },
+  "variables":
+  {
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'adVNET')]",
+    "subnetName": "adSubnet",
+    "subnetRef": "[concat(variables('vnetID'), '/subnets/', variables('subnetName'))]",
+    "imagePublisher": "MicrosoftWindowsServer",
+    "imageOffer": "WindowsServer",
+    "imageSku": "2016-Datacenter",
+    "OSDiskName": "vm1OSDisk",
+    "storageSku": "Standard_LRS",
+    "vmSize": "Standard_D2_v2",
+    "nicName": "[concat(parameters('vmName'), 'NetworkInterface')]",
+    "pipName": "[concat(parameters('vmName'), 'PublicIP')]",
+    "domainJoinOptions": "3",
+    "ouPath": "",
+    "localAdminKeyVaultSubscriptionID": "",
+    "localAdminKeyVaultResourceGroupName": "",
+    "localAdminKeyVaultName": "",
+    "keyVaultRef": "[resourceId(variables('localAdminKeyVaultSubscriptionID'),variables('localAdminKeyVaultResourceGroupName'),'Microsoft.KeyVault',variables('localAdminKeyVaultName'))]",
+    "localAdminKeyVaultUsernameSecretName": "",
+    "localAdminKeyVaultPasswordSecretName": ""
+  },
+  "resources":
+  [
+    {
+      "name": "[variables('nicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('region')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn":
+      [        
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+      ],
+      "tags":
+      {
+        "displayName": "vmNic"
+      },
+      "properties":
+      {
+        "ipConfigurations":
+        [
+          {
+            "name": "ipconfig1",
+            "properties":
+            {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet":
+              {
+                "id": "[variables('subnetRef')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-02-01",
+      "name": "vmTemplate",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn":
+      [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+      ],
+      "properties":
+      {
+        "mode": "Incremental",
+        "templateLink":
+        {
+          "uri": "https://kirkemoodysy2kypspzshv4o.blob.core.windows.net/arm/newVM.json",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters":
+        {
+          "region":
+          {
+            "value": "[parameters('region')]"
+          },
+          "vmName":
+          {
+            "value": "[parameters('vmName')]"
+          },
+          "nicName":
+          {
+            "value": "[variables('nicName')]"
+          },
+          "vmSize":
+          {
+            "value": "[variables('vmSize')]"
+          },
+          "vmAdminUsername":
+          {
+            "reference":
+            {
+              "keyVault":
+              {
+                "id": "[variables('keyVaultRef')]"
+              },
+              "secretName": "[variables('localAdminKeyVaultUsernameSecretName')]"
+            }
+          },
+          "vmAdminPassword":
+          {
+            "reference":
+            {
+              "keyVault":
+              {
+                "id": "[variables('keyVaultRef')]"
+              },
+              "secretName": "[variables('localAdminKeyVaultPasswordSecretName')]"
+            }
+          },
+          "domainToJoin":
+          {
+            "value": "[parameters('domainToJoin')]"
+          },
+          "domainUsername":
+          {
+            "value": "[parameters('domainUsername')]"
+          },
+          "domainPassword":
+          {
+            "value": "[parameters('domainPassword')]"
+          },
+          "ouPath":
+          {
+            "value": "[variables('ouPath')]"
+          },
+          "windowsOSVersion":
+          {
+            "value": "[variables('imageSku')]"
+          },
+          "storageSku":
+          {
+            "value": "[variables('storageSku')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "[variables('pipName')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[parameters('region')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn":
+      [
+      ],
+      "tags":
+      {
+        "displayName": "vmPIP"
+      },
+      "properties":
+      {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    }
+  ],
+  "outputs":
+  {
+
+  }
+}
