@@ -3,16 +3,24 @@
   "contentVersion": "1.0.0.0",
   "parameters":
   {
-    "vmName": {
+    "region":
+    {
+      "value": "centralus"
+    },
+    "vmName":
+    {
       "value": "vm2"
     },
-    "vmAdminUserName": {
+    "vmAdminUserName":
+    {
       "value": "myadmin"
     },
-    "domainToJoin": {
+    "domainToJoin":
+    {
       "value": "blueskyabove.local"
     },
-    "domainUsername": {
+    "domainUsername":
+    {
       "value": "myadmin"
     }
   }
